@@ -114,8 +114,9 @@ fn main() -> Result<(), Error> {
     for (tow, msg_type_map) in tow_map.iter() {
         for (msg_type, sid_vec) in msg_type_map.iter() {
             let mut sid_vec_sort = sid_vec.to_vec();
-            sid_vec_sort.sort();
             sid_vec_sort.retain(|sid| [0, 1, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 56, 57, 58, 61].contains(&sid.code));
+            sid_vec_sort.sort();
+            sid_vec_sort.dedup();
             let mut sid_vec_str = String::new();
             for sid in sid_vec_sort.iter() {
                 sid_vec_str.push_str(&format!("{} ", sid));
@@ -123,6 +124,12 @@ fn main() -> Result<(), Error> {
             println!("{:>6} {:>4} {}", tow, msg_type, sid_vec_str);
         }
         println!();
+        if tow % 60 == 0 {
+            println!()
+        }
+        if tow % 600 == 0 {
+            println!()
+        }
     }
 
 
