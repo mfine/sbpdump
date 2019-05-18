@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error};
 use serde_json::Value;
@@ -23,10 +24,26 @@ struct Sid {
     sat: u64
 }
 
+impl fmt::Display for Sid {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}:{}", self.code, self.sat)
+    }
+}
+
 #[derive(Debug)]
 struct Msg {
     msg_type: u64,
     sid_vec: Vec<Sid>,
+}
+
+impl fmt::Display for Msg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut sid_vec = String::new();
+        for sid in self.sid_vec.iter() {
+            sid_vec.push_str(&format!("{} ", sid));
+        }
+        write!(fmt, "{} {}", self.msg_type, sid_vec)
+    }
 }
 
 fn msg(value: &Value) -> Option<Msg> {
@@ -94,8 +111,9 @@ fn main() -> Result<(), Error> {
     for (key, values) in tow_map.iter() {
         println!("### {}", key);
         for value in values.iter() {
-            dbg!(value);
+            println!("{}", value);
         }
+        println!();
     }
 
     Ok(())
