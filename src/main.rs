@@ -106,6 +106,7 @@ fn main() -> Result<(), Error> {
         for (msg_type, sid_vec) in msg_type_map.iter() {
             let mut sid_vec_sort = sid_vec.to_vec();
             sid_vec_sort.sort();
+            sid_vec_sort.retain(|sid| [0, 1, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 56, 57, 58, 61].contains(&sid.code));
             let mut sid_vec_str = String::new();
             for sid in sid_vec_sort.iter() {
                 sid_vec_str.push_str(&format!("{} ", sid));
