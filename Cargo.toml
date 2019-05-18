@@ -1,5 +1,5 @@
 [package]
-name = "sbp-report"
+name = "time-of-week-signals"
 version = "0.1.0"
 authors = ["Mark Fine <mark.fine@gmail.com>"]
 edition = "2018"
