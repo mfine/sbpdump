@@ -1,8 +1,10 @@
+use serde_json::Value;
+use std::collections::BTreeMap;
+use std::env;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error};
-use serde_json::Value;
-use std::collections::BTreeMap;
+use std::process;
 
 #[derive(Ord)]
 #[derive(PartialOrd)]
@@ -86,7 +88,14 @@ fn msg(value: &Value) -> Option<Msg> {
 }
 
 fn main() -> Result<(), Error> {
-    let input = File::open("sbp.json")?;
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        eprintln!("not enough arguments");
+        process::exit(1);
+    }
+
+    let filename = args[1].clone();
+    let input = File::open(filename)?;
     let buffered = BufReader::new(input);
 
     let mut tow_map: BTreeMap<u64, BTreeMap<u64, Vec<Sid>>> = BTreeMap::new();
