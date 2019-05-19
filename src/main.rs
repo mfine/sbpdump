@@ -106,12 +106,15 @@ fn main() -> Result<(), Error> {
     let input = File::open(filename)?;
     let buffered = BufReader::new(input);
 
-    let mut tow_map: BTreeMap<u64, BTreeMap<u64, Vec<Sid>>> = BTreeMap::new();
+    let mut tow_map: BTreeMap<u64, BTreeMap<u64, BTreeMap<u64, Vec<Sid>>>> = BTreeMap::new();
     for line in buffered.lines() {
         let value: Value = serde_json::from_str(&(line?))?;
         if let Some(msg) = msg(&value) {
             let mut sid_vec = msg.sid_vec;
-            tow_map.entry(msg.tow)
+            tow_map
+                .entry(msg.tow)
+                .or_insert_with(BTreeMap::new)
+                .entry(msg.sender)
                 .or_insert_with(BTreeMap::new)
                 .entry(msg.msg_type)
                 .or_insert_with(Vec::new)
@@ -119,19 +122,21 @@ fn main() -> Result<(), Error> {
         }
     }
 
-    for (tow, msg_type_map) in tow_map.iter() {
-        for (msg_type, sid_vec) in msg_type_map.iter() {
-            let mut sid_vec_sort = sid_vec.to_vec();
-            sid_vec_sort.retain(
-                |sid|
-                [0, 1, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 56, 57, 58, 61].contains(&sid.code));
-            sid_vec_sort.sort();
-            sid_vec_sort.dedup();
-            let mut sid_vec_str = String::new();
-            for sid in sid_vec_sort.iter() {
-                sid_vec_str.push_str(&format!("{} ", sid));
+    for (tow, sender_map) in tow_map.iter() {
+        for (sender, msg_type_map) in sender_map.iter() {
+            for (msg_type, sid_vec) in msg_type_map.iter() {
+                let mut sid_vec_sort = sid_vec.to_vec();
+                sid_vec_sort.retain(
+                    |sid|
+                    [0, 1, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 56, 57, 58, 61].contains(&sid.code));
+                sid_vec_sort.sort();
+                sid_vec_sort.dedup();
+                let mut sid_vec_str = String::new();
+                for sid in sid_vec_sort.iter() {
+                    sid_vec_str.push_str(&format!("{} ", sid));
+                }
+                println!("{:>6} {:>5} {:>4} {}", tow, sender, msg_type, sid_vec_str);
             }
-            println!("{:>6} {:>4} {}", tow, msg_type, sid_vec_str);
         }
         println!();
         if tow % 60 == 0 {
