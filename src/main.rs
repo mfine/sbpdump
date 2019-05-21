@@ -18,6 +18,13 @@ impl fmt::Display for Sid {
     }
 }
 
+const MSG_OBS: u64 = 74;
+const MSG_EPHEMERIS_GPS: u64 = 138;
+const MSG_EPHEMERIS_GAL: u64 = 149;
+const MSG_SSR_ORBIT_CLOCK: u64 = 1501;
+const MSG_SSR_CODE_BIASES: u64 = 1505;
+const MSG_SSR_PHASE_BIASES: u64 = 1510;
+
 #[derive(Debug)]
 struct Msg {
     msg_type: u64,
@@ -27,87 +34,66 @@ struct Msg {
 }
 
 impl Msg {
+    fn observations(value: &Value, msg_type: u64, sender: u64) -> Option<Msg> {
+        value["header"]["t"]["tow"].as_u64().and_then(|tow| {
+            value["obs"].as_array().and_then(|obs| {
+                let mut sid_vec: Vec<Sid> = Vec::new();
+                for ob in obs.iter() {
+                    if let Some(sat) = ob["sid"]["sat"].as_u64() {
+                        if let Some(code) = ob["sid"]["code"].as_u64() {
+                            sid_vec.push(Sid { sat, code })
+                        }
+                    }
+                }
+                Some(Msg {
+                    msg_type,
+                    sender,
+                    tow: tow / 1000,
+                    sid_vec,
+                })
+            })
+        })
+    }
+
+    fn ephemerides(value: &Value, msg_type: u64, sender: u64) -> Option<Msg> {
+        value["common"]["toe"]["tow"].as_u64().and_then(|tow| {
+            value["common"]["sid"]["sat"].as_u64().and_then(|sat| {
+                value["common"]["sid"]["code"].as_u64().and_then(|code| {
+                    Some(Msg {
+                        msg_type,
+                        sender,
+                        tow,
+                        sid_vec: vec![Sid { sat, code }],
+                    })
+                })
+            })
+        })
+    }
+
+    fn corrections(value: &Value, msg_type: u64, sender: u64) -> Option<Msg> {
+        value["time"]["tow"].as_u64().and_then(|tow| {
+            value["sid"]["sat"].as_u64().and_then(|sat| {
+                value["sid"]["code"].as_u64().and_then(|code| {
+                    Some(Msg {
+                        msg_type,
+                        sender,
+                        tow,
+                        sid_vec: vec![Sid { sat, code }],
+                    })
+                })
+            })
+        })
+    }
+
     fn new(value: &Value) -> Option<Msg> {
         value["msg_type"].as_u64().and_then(|msg_type| {
             value["sender"].as_u64().and_then(|sender| match msg_type {
-                74 => value["header"]["t"]["tow"].as_u64().and_then(|tow| {
-                    value["obs"].as_array().and_then(|obs| {
-                        let mut sid_vec: Vec<Sid> = Vec::new();
-                        for ob in obs.iter() {
-                            if let Some(sat) = ob["sid"]["sat"].as_u64() {
-                                if let Some(code) = ob["sid"]["code"].as_u64() {
-                                    sid_vec.push(Sid { sat, code })
-                                }
-                            }
-                        }
-                        Some(Msg {
-                            msg_type,
-                            sender,
-                            tow: tow / 1000,
-                            sid_vec,
-                        })
-                    })
-                }),
-                138 => value["common"]["toe"]["tow"].as_u64().and_then(|tow| {
-                    value["common"]["sid"]["sat"].as_u64().and_then(|sat| {
-                        value["common"]["sid"]["code"].as_u64().and_then(|code| {
-                            Some(Msg {
-                                msg_type,
-                                sender,
-                                tow,
-                                sid_vec: vec![Sid { sat, code }],
-                            })
-                        })
-                    })
-                }),
-                149 => value["common"]["toe"]["tow"].as_u64().and_then(|tow| {
-                    value["common"]["sid"]["sat"].as_u64().and_then(|sat| {
-                        value["common"]["sid"]["code"].as_u64().and_then(|code| {
-                            Some(Msg {
-                                msg_type,
-                                sender,
-                                tow,
-                                sid_vec: vec![Sid { sat, code }],
-                            })
-                        })
-                    })
-                }),
-                1501 => value["time"]["tow"].as_u64().and_then(|tow| {
-                    value["sid"]["sat"].as_u64().and_then(|sat| {
-                        value["sid"]["code"].as_u64().and_then(|code| {
-                            Some(Msg {
-                                msg_type,
-                                sender,
-                                tow,
-                                sid_vec: vec![Sid { sat, code }],
-                            })
-                        })
-                    })
-                }),
-                1505 => value["time"]["tow"].as_u64().and_then(|tow| {
-                    value["sid"]["sat"].as_u64().and_then(|sat| {
-                        value["sid"]["code"].as_u64().and_then(|code| {
-                            Some(Msg {
-                                msg_type,
-                                sender,
-                                tow,
-                                sid_vec: vec![Sid { sat, code }],
-                            })
-                        })
-                    })
-                }),
-                1510 => value["time"]["tow"].as_u64().and_then(|tow| {
-                    value["sid"]["sat"].as_u64().and_then(|sat| {
-                        value["sid"]["code"].as_u64().and_then(|code| {
-                            Some(Msg {
-                                msg_type,
-                                sender,
-                                tow,
-                                sid_vec: vec![Sid { sat, code }],
-                            })
-                        })
-                    })
-                }),
+                MSG_OBS => Self::observations(value, msg_type, sender),
+                MSG_EPHEMERIS_GPS => Self::ephemerides(value, msg_type, sender),
+                MSG_EPHEMERIS_GAL => Self::ephemerides(value, msg_type, sender),
+                MSG_SSR_ORBIT_CLOCK => Self::corrections(value, msg_type, sender),
+                MSG_SSR_CODE_BIASES => Self::corrections(value, msg_type, sender),
+                MSG_SSR_PHASE_BIASES => Self::corrections(value, msg_type, sender),
                 _ => None,
             })
         })
