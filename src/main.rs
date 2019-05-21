@@ -31,7 +31,8 @@ struct Msg {
     sid_vec: Vec<Sid>,
 }
 
-fn msg(value: &Value) -> Option<Msg> {
+impl Msg {
+    fn new(value: &Value) -> Option<Msg> {
     value["msg_type"].as_u64().and_then(
         |msg_type|
         value["sender"].as_u64().and_then(
@@ -93,6 +94,7 @@ fn msg(value: &Value) -> Option<Msg> {
                                 Some(Msg { msg_type, sender, tow, sid_vec: vec![Sid { sat, code }] })))),
                 _ => None,
             }))
+    }
 }
 
 fn main() -> Result<(), Error> {
@@ -109,7 +111,7 @@ fn main() -> Result<(), Error> {
     let mut tow_map: BTreeMap<u64, BTreeMap<u64, BTreeMap<u64, Vec<Sid>>>> = BTreeMap::new();
     for line in buffered.lines() {
         let value: Value = serde_json::from_str(&(line?))?;
-        if let Some(msg) = msg(&value) {
+        if let Some(msg) = Msg::new(&value) {
             let mut sid_vec = msg.sid_vec;
             tow_map
                 .entry(msg.tow)
