@@ -6,7 +6,14 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Error};
 use std::process;
 
-#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+const MSG_OBS: u64 = 74;
+const MSG_EPHEMERIS_GPS: u64 = 138;
+const MSG_EPHEMERIS_GAL: u64 = 149;
+const MSG_SSR_ORBIT_CLOCK: u64 = 1501;
+const MSG_SSR_CODE_BIASES: u64 = 1505;
+const MSG_SSR_PHASE_BIASES: u64 = 1510;
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
 struct Sid {
     sat: u64,
     code: u64,
@@ -18,14 +25,6 @@ impl fmt::Display for Sid {
     }
 }
 
-const MSG_OBS: u64 = 74;
-const MSG_EPHEMERIS_GPS: u64 = 138;
-const MSG_EPHEMERIS_GAL: u64 = 149;
-const MSG_SSR_ORBIT_CLOCK: u64 = 1501;
-const MSG_SSR_CODE_BIASES: u64 = 1505;
-const MSG_SSR_PHASE_BIASES: u64 = 1510;
-
-#[derive(Debug)]
 struct Msg {
     msg_type: u64,
     sender: u64,
