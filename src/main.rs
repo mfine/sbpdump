@@ -1,10 +1,11 @@
+extern crate clap;
+
+use clap::{Arg, App};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
-use std::env;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error};
-use std::process;
 
 const MSG_OBS: u64 = 74;
 const MSG_EPHEMERIS_GPS: u64 = 138;
@@ -108,19 +109,10 @@ impl Msg {
     }
 }
 
-fn main() -> Result<(), Error> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("not enough arguments");
-        process::exit(1);
-    }
-
-    let filename = args[1].clone();
-    let input = File::open(filename)?;
-    let buffered = BufReader::new(input);
-
+fn matched(file: &File) -> Result<(), Error> {
+    let buf = BufReader::new(file);
     let mut tow_map: BTreeMap<u64, BTreeMap<u64, BTreeMap<u64, BTreeSet<Sid>>>> = BTreeMap::new();
-    for line in buffered.lines() {
+    for line in buf.lines() {
         let value: Value = serde_json::from_str(&(line?))?;
         if let Some(msg) = Msg::new(&value) {
             let mut sid_set = msg.sid_set;
@@ -165,4 +157,19 @@ fn main() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn main() -> Result<(), Error> {
+    let matches = App::new("sbpdump")
+        .arg(Arg::with_name("file")
+             .short("f")
+             .long("file")
+             .required(true)
+             .takes_value(true))
+        .get_matches();
+
+    let file = matches.value_of("file").unwrap();
+    let input = File::open(file)?;
+
+    matched(&input)
 }
