@@ -1,7 +1,6 @@
 extern crate clap;
 
 use clap::{App, Arg};
-use sbpdump;
 use std::fs::File;
 use std::io::Error;
 
