@@ -2,7 +2,9 @@
 name = "sbpdump"
 version = "0.1.0"
 authors = ["Mark Fine <mark.fine@gmail.com>"]
-edition = "2018"
+license = "MIT"
+description = "A SBP frame analysis tool"
+repository = "https://github.com/mfine/sbpdump"
 
 [dependencies]
 clap = "2.33.0"
