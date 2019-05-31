@@ -13,10 +13,12 @@ fn main() -> Result<(), Error> {
                 .required(true)
                 .takes_value(true),
         )
+        .arg(Arg::with_name("matched").long("matched"))
         .get_matches();
 
     let file = matches.value_of("file").unwrap();
     let input = File::open(file)?;
+    let matched = matches.is_present("matched");
 
-    sbpdump::matched(&input)
+    sbpdump::dump(&input, matched)
 }

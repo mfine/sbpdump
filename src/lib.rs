@@ -6,19 +6,34 @@ use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error};
 
+/// Observation message number.
 const MSG_OBS: u64 = 74;
+
+/// GPS ephemeris message number.
 const MSG_EPHEMERIS_GPS: u64 = 138;
+
+/// Galileo ephemeris message number.
 const MSG_EPHEMERIS_GAL: u64 = 149;
+
+/// SSR combined orbit and clock message number.
 const MSG_SSR_ORBIT_CLOCK: u64 = 1501;
+
+/// SSR code bias message number.
 const MSG_SSR_CODE_BIASES: u64 = 1505;
+
+/// SSR phase bias message number.
 const MSG_SSR_PHASE_BIASES: u64 = 1510;
 
+/// GPS signal codes.
 const GPS_CODES: [u64; 12] = [0, 1, 5, 6, 7, 8, 9, 10, 11, 56, 57, 58];
+
+/// Galileo signal codes.
 const GAL_CODES: [u64; 16] = [
     14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 61,
 ];
 
-#[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
+/// Signal identifier with optional issue of data.
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
 struct Sid {
     sat: u64,
     code: u64,
@@ -35,6 +50,8 @@ impl fmt::Display for Sid {
     }
 }
 
+/// Message information to dump.
+#[derive(Debug)]
 struct Msg {
     msg_type: u64,
     sender: u64,
@@ -43,6 +60,7 @@ struct Msg {
 }
 
 impl Msg {
+    /// Build message from all GPS and Galileo observations.
     fn observations(value: &Value, msg_type: u64, sender: u64) -> Option<Msg> {
         value["header"]["t"]["tow"].as_u64().and_then(|tow| {
             value["obs"].as_array().and_then(|obs| {
@@ -50,7 +68,11 @@ impl Msg {
                 for ob in obs.iter() {
                     if let Some(sat) = ob["sid"]["sat"].as_u64() {
                         if let Some(code) = ob["sid"]["code"].as_u64() {
-                            sid_set.insert(Sid { sat, code, iod: None });
+                            sid_set.insert(Sid {
+                                sat,
+                                code,
+                                iod: None,
+                            });
                         }
                     }
                 }
@@ -64,12 +86,17 @@ impl Msg {
         })
     }
 
+    /// Build message from GPS and Galileo ephemerides.
     fn ephemerides(value: &Value, msg_type: u64, sender: u64) -> Option<Msg> {
         value["common"]["toe"]["tow"].as_u64().and_then(|tow| {
             value["common"]["sid"]["sat"].as_u64().and_then(|sat| {
                 value["common"]["sid"]["code"].as_u64().and_then(|code| {
                     let mut sid_set: BTreeSet<Sid> = BTreeSet::new();
-                    sid_set.insert(Sid { sat, code, iod: value["iode"].as_u64() });
+                    sid_set.insert(Sid {
+                        sat,
+                        code,
+                        iod: value["iode"].as_u64(),
+                    });
                     Some(Msg {
                         msg_type,
                         sender,
@@ -81,12 +108,17 @@ impl Msg {
         })
     }
 
+    /// Build message from GPS and Galileo SSR corrections.
     fn corrections(value: &Value, msg_type: u64, sender: u64) -> Option<Msg> {
         value["time"]["tow"].as_u64().and_then(|tow| {
             value["sid"]["sat"].as_u64().and_then(|sat| {
                 value["sid"]["code"].as_u64().and_then(|code| {
                     let mut sid_set: BTreeSet<Sid> = BTreeSet::new();
-                    sid_set.insert(Sid { sat, code, iod: value["iod"].as_u64() });
+                    sid_set.insert(Sid {
+                        sat,
+                        code,
+                        iod: value["iod"].as_u64(),
+                    });
                     Some(Msg {
                         msg_type,
                         sender,
@@ -98,6 +130,7 @@ impl Msg {
         })
     }
 
+    /// Build message.
     fn new(value: &Value) -> Option<Msg> {
         value["msg_type"].as_u64().and_then(|msg_type| {
             value["sender"].as_u64().and_then(|sender| match msg_type {
@@ -113,23 +146,9 @@ impl Msg {
     }
 }
 
-pub fn matched(file: &File) -> Result<(), Error> {
+/// Dump messages from file.
+pub fn dump(file: &File, matched: bool) -> Result<(), Error> {
     let buf = BufReader::new(file);
-    let mut tow_map: BTreeMap<u64, BTreeMap<u64, BTreeMap<u64, BTreeSet<Sid>>>> = BTreeMap::new();
-    for line in buf.lines() {
-        let value: Value = serde_json::from_str(&(line?))?;
-        if let Some(msg) = Msg::new(&value) {
-            let mut sid_set = msg.sid_set;
-            tow_map
-                .entry(msg.tow)
-                .or_insert_with(BTreeMap::new)
-                .entry(msg.sender)
-                .or_insert_with(BTreeMap::new)
-                .entry(msg.msg_type)
-                .or_insert_with(BTreeSet::new)
-                .append(&mut sid_set);
-        }
-    }
 
     let mut code_set: HashSet<u64> = HashSet::new();
     for code in GPS_CODES.iter() {
@@ -139,19 +158,54 @@ pub fn matched(file: &File) -> Result<(), Error> {
         code_set.insert(*code);
     }
 
-    for (tow, sender_map) in tow_map.iter() {
-        for (sender, msg_type_map) in sender_map.iter() {
-            for (msg_type, sid_set) in msg_type_map.iter() {
+    if matched {
+        let mut tow_map: BTreeMap<u64, BTreeMap<u64, BTreeMap<u64, BTreeSet<Sid>>>> =
+            BTreeMap::new();
+        for line in buf.lines() {
+            let value: Value = serde_json::from_str(&(line?))?;
+            if let Some(msg) = Msg::new(&value) {
+                let mut sid_set = msg.sid_set;
+                tow_map
+                    .entry(msg.tow)
+                    .or_insert_with(BTreeMap::new)
+                    .entry(msg.sender)
+                    .or_insert_with(BTreeMap::new)
+                    .entry(msg.msg_type)
+                    .or_insert_with(BTreeSet::new)
+                    .append(&mut sid_set);
+            }
+        }
+
+        for (tow, sender_map) in tow_map.iter() {
+            for (sender, msg_type_map) in sender_map.iter() {
+                for (msg_type, sid_set) in msg_type_map.iter() {
+                    let mut sid_set_str = String::new();
+                    for sid in sid_set.iter() {
+                        if code_set.contains(&sid.code) {
+                            sid_set_str.push_str(&format!("{} ", sid));
+                        }
+                    }
+                    println!("{:>6} {:>5} {:>4} {}", tow, sender, msg_type, sid_set_str);
+                }
+            }
+            println!();
+        }
+    } else {
+        for line in buf.lines() {
+            let value: Value = serde_json::from_str(&(line?))?;
+            if let Some(msg) = Msg::new(&value) {
                 let mut sid_set_str = String::new();
-                for sid in sid_set.iter() {
+                for sid in msg.sid_set.iter() {
                     if code_set.contains(&sid.code) {
                         sid_set_str.push_str(&format!("{} ", sid));
                     }
                 }
-                println!("{:>6} {:>5} {:>4} {}", tow, sender, msg_type, sid_set_str);
+                println!(
+                    "{:>6} {:>5} {:>4} {}",
+                    msg.tow, msg.sender, msg.msg_type, sid_set_str
+                );
             }
         }
-        println!();
     }
 
     Ok(())
