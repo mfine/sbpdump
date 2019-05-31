@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
         )
         .arg(Arg::with_name("matched").long("matched"))
         .arg(Arg::with_name("gps").long("gps"))
-        .arg(Arg::with_name("galileo").long("galileo"))
+        .arg(Arg::with_name("gal").long("gal"))
         .get_matches();
 
     let file = matches.value_of("file").unwrap();
@@ -23,7 +23,7 @@ fn main() -> Result<(), Error> {
 
     let matched = matches.is_present("matched");
     let gps = matches.is_present("gps");
-    let galileo = matches.is_present("galileo");
+    let gal = matches.is_present("gal");
 
-    sbpdump::dump(&input, matched, gps || !galileo, galileo || !gps)
+    sbpdump::dump(&input, matched, gps || !gal, gal || !gps)
 }
