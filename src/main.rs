@@ -14,11 +14,16 @@ fn main() -> Result<(), Error> {
                 .takes_value(true),
         )
         .arg(Arg::with_name("matched").long("matched"))
+        .arg(Arg::with_name("gps").long("gps"))
+        .arg(Arg::with_name("galileo").long("galileo"))
         .get_matches();
 
     let file = matches.value_of("file").unwrap();
     let input = File::open(file)?;
-    let matched = matches.is_present("matched");
 
-    sbpdump::dump(&input, matched)
+    let matched = matches.is_present("matched");
+    let gps = matches.is_present("gps");
+    let galileo = matches.is_present("galileo");
+
+    sbpdump::dump(&input, matched, gps || !galileo, galileo || !gps)
 }

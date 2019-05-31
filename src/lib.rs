@@ -147,15 +147,19 @@ impl Msg {
 }
 
 /// Dump messages from file.
-pub fn dump(file: &File, matched: bool) -> Result<(), Error> {
+pub fn dump(file: &File, matched: bool, gps: bool, galileo: bool) -> Result<(), Error> {
     let buf = BufReader::new(file);
 
     let mut code_set: HashSet<u64> = HashSet::new();
-    for code in GPS_CODES.iter() {
-        code_set.insert(*code);
+    if gps {
+        for code in GPS_CODES.iter() {
+            code_set.insert(*code);
+        }
     }
-    for code in GAL_CODES.iter() {
-        code_set.insert(*code);
+    if galileo {
+        for code in GAL_CODES.iter() {
+            code_set.insert(*code);
+        }
     }
 
     if matched {
