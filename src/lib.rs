@@ -147,12 +147,6 @@ pub fn matched(file: &File) -> Result<(), Error> {
             }
         }
         println!();
-        if tow % 60 == 0 {
-            println!()
-        }
-        if tow % 600 == 0 {
-            println!()
-        }
     }
 
     Ok(())
