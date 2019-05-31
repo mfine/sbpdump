@@ -22,11 +22,16 @@ const GAL_CODES: [u64; 16] = [
 struct Sid {
     sat: u64,
     code: u64,
+    iod: Option<u64>,
 }
 
 impl fmt::Display for Sid {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{:>2}:{:<2}", self.sat, self.code)
+        if let Some(iod) = self.iod {
+            write!(fmt, "{}:{}-{}", self.sat, self.code, iod)
+        } else {
+            write!(fmt, "{}:{}", self.sat, self.code)
+        }
     }
 }
 
@@ -45,7 +50,7 @@ impl Msg {
                 for ob in obs.iter() {
                     if let Some(sat) = ob["sid"]["sat"].as_u64() {
                         if let Some(code) = ob["sid"]["code"].as_u64() {
-                            sid_set.insert(Sid { sat, code });
+                            sid_set.insert(Sid { sat, code, iod: None });
                         }
                     }
                 }
@@ -64,7 +69,7 @@ impl Msg {
             value["common"]["sid"]["sat"].as_u64().and_then(|sat| {
                 value["common"]["sid"]["code"].as_u64().and_then(|code| {
                     let mut sid_set: BTreeSet<Sid> = BTreeSet::new();
-                    sid_set.insert(Sid { sat, code });
+                    sid_set.insert(Sid { sat, code, iod: value["iode"].as_u64() });
                     Some(Msg {
                         msg_type,
                         sender,
@@ -81,7 +86,7 @@ impl Msg {
             value["sid"]["sat"].as_u64().and_then(|sat| {
                 value["sid"]["code"].as_u64().and_then(|code| {
                     let mut sid_set: BTreeSet<Sid> = BTreeSet::new();
-                    sid_set.insert(Sid { sat, code });
+                    sid_set.insert(Sid { sat, code, iod: value["iod"].as_u64() });
                     Some(Msg {
                         msg_type,
                         sender,
