@@ -146,6 +146,16 @@ impl Msg {
     }
 }
 
+impl fmt::Display for Msg {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut sid_set_str = String::new();
+        for sid in self.sid_set.iter() {
+            sid_set_str.push_str(&format!("{} ", sid));
+        }
+        write!(fmt, "{:>6} {:>5} {:>4} {}", self.tow, self.sender, self.msg_type, sid_set_str)
+    }
+}
+
 /// Dump messages from file.
 pub fn dump(file: &File, matched: bool, gps: bool, gal: bool) -> Result<(), Error> {
     let buf = BufReader::new(file);
@@ -198,16 +208,7 @@ pub fn dump(file: &File, matched: bool, gps: bool, gal: bool) -> Result<(), Erro
         for line in buf.lines() {
             let value: Value = serde_json::from_str(&(line?))?;
             if let Some(msg) = Msg::new(&value) {
-                let mut sid_set_str = String::new();
-                for sid in msg.sid_set.iter() {
-                    if code_set.contains(&sid.code) {
-                        sid_set_str.push_str(&format!("{} ", sid));
-                    }
-                }
-                println!(
-                    "{:>6} {:>5} {:>4} {}",
-                    msg.tow, msg.sender, msg.msg_type, sid_set_str
-                );
+                println!("{}", msg);
             }
         }
     }
